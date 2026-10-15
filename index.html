@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Simulados — Painel Cloudflare D1</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-dark: #0f172a;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --border: #cbd5e1;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --btn-green: #22c55e;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+
+        .discipline-header {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .discipline-title { font-size: 1.8rem; color: var(--primary-dark); font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
+        .discipline-percentage { font-size: 2.5rem; color: var(--success); font-weight: bold; margin-bottom: 20px; }
+
+        .metrics-table {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 1rem;
+        }
+
+        .metrics-table td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; }
+        .metrics-table td:nth-child(2) { text-align: right; font-weight: bold; }
+
+        .section-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; color: var(--primary-dark); }
+        
+        .caderno-row {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        .caderno-info { font-size: 1.05rem; font-weight: 600; color: #334155; }
+        .caderno-sub { font-size: 0.85rem; color: #64748b; }
+
+        .actions-group { display: flex; gap: 10px; align-items: center; }
+
+        .btn-action {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-add { background: var(--btn-green); color: white; font-size: 1.1rem; padding: 4px 10px; }
+        .btn-responder { background: var(--primary); color: white; }
+        .btn-visualizar { background: #e2e8f0; color: #334155; }
+        .btn-action:hover { opacity: 0.9; }
+
+        #view-container { display: none; background: white; padding: 30px; border-radius: 10px; border: 1px solid var(--border); }
+        .btn-back { background: #64748b; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app-main">
+    <div class="discipline-header">
+        <div class="discipline-title" id="disc-nome">Carregando...</div>
+        <div class="discipline-percentage" id="disc-perc">0%</div>
+        
+        <table class="metrics-table">
+            <tr><td>META DE QUESTÕES</td><td id="val-meta">200</td></tr>
+            <tr><td>RESOLVIDAS</td><td id="val-resolvidas">0</td></tr>
+            <tr><td>ACERTOS</td><td id="val-acertos" style="color:var(--success);">0</td></tr>
+            <tr><td>ERROS</td><td id="val-erros" style="color:var(--danger);">0</td></tr>
+        </table>
+    </div>
+
+    <div class="section-title">Cadernos de Questões (Vinculados ao Cloudflare D1)</div>
+    <div id="cadernos-list">
+        <!-- Carregado via API do D1 -->
+    </div>
+</div>
+
+<div class="container" id="view-container">
+    <button class="btn-back" onclick="voltarPainel()">⬅️ Voltar ao Painel</button>
+    <h2 id="view-title" style="margin-bottom: 20px; color: var(--primary);">Ação</h2>
+    <div id="view-content"></div>
+</div>
+
+<script>
+async function carregarDadosDoBanco() {
+    try {
+        const response = await fetch('/api/dados');
+        const data = await response.json();
+        
+        if(data.disciplinas && data.disciplinas.length > 0) {
+            let disc = data.disciplinas[0]; // Pega a primeira disciplina de exemplo
+            document.getElementById("disc-nome").innerText = disc.nome;
+            document.getElementById("val-meta").innerText = disc.meta_questoes;
+        }
+
+        const container = document.getElementById("cadernos-list");
+        container.innerHTML = "";
+
+        if(data.cadernos) {
+            data.cadernos.forEach(cad => {
+                container.innerHTML += `
+                    <div class="caderno-row">
+                        <div>
+                            <div class="caderno-info">${cad.titulo}</div>
+                            <div class="caderno-sub">Caderno ativo no Cloudflare D1</div>
+                        </div>
+                        <div class="actions-group">
+                            <button class="btn-action btn-add" onclick="abrirAdicionarQuestao(${cad.id})">+</button>
+                            <button class="btn-action btn-responder" onclick="alert('Motor de simulado pronto para conectar com as questões deste caderno!')">Responder</button>
+                            <button class="btn-action btn-visualizar" onclick="alert('Modo de visualização e edição de explicações!')">Visualizar</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    } catch(err) {
+        console.error("Erro ao carregar dados:", err);
+    }
+}
+
+function abrirAdicionarQuestao(cadernoId) {
+    document.getElementById("app-main").style.display = "none";
+    document.getElementById("view-container").style.display = "block";
+    document.getElementById("view-title").innerText = "Adicionar Questão ao Caderno";
+    
+    document.getElementById("view-content").innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            <label><b>Enunciado:</b></label>
+            <textarea id="nova-enunciado" rows="4" style="padding:10px; border:1px solid var(--border); border-radius:6px;"></textarea>
+            
+            <label><b>Gabarito:</b></label>
+            <select id="novo-gabarito" style="padding:10px; border:1px solid var(--border); border-radius:6px;">
+                <option value="C">Certo</option>
+                <option value="E">Errado</option>
+            </select>
+
+            <label><b>Explicação:</b></label>
+            <textarea id="nova-explicacao" rows="3" style="padding:10px; border:1px solid var(--border); border-radius:6px;"></textarea>
+
+            <button class="btn-action btn-responder" style="padding:12px; margin-top:10px;" onclick="salvarQuestao(${cadernoId})">Salvar no Cloudflare D1</button>
+        </div>
+    `;
+}
+
+async function salvarQuestao(cadernoId) {
+    const enunciado = document.getElementById("nova-enunciado").value;
+    const gabarito = document.getElementById("novo-gabarito").value;
+    const explicacao = document.getElementById("nova-explicacao").value;
+
+    const res = await fetch('/api/questoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caderno_id: cadernoId, enunciado, gabarito, explicacao })
+    });
+
+    const resultado = await res.json();
+    if(resultado.sucesso) {
+        alert("Questão salva com sucesso direto no banco D1!");
+        voltarPainel();
+    } else {
+        alert("Erro ao salvar: " + resultado.erro);
+    }
+}
+
+function voltarPainel() {
+    document.getElementById("view-container").style.display = "none";
+    document.getElementById("app-main").style.display = "block";
+    carregarDadosDoBanco();
+}
+
+window.onload = carregarDadosDoBanco;
+</script>
+
+</body>
+</html>
