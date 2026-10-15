@@ -1,0 +1,12 @@
+name = "plataforma-simulados"
+main = "functions/api.js"
+compatibility_date = "2026-10-15"
+
+[assets]
+directory = "."
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meus-simulados-db"
+database_id = "b2b7bb69-4d92-457c-81a8-77142198ff5e"
